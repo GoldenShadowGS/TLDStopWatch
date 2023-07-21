@@ -32,6 +32,7 @@ public:
 	float getAlarmRemainingMinutes();
 	float getAlarmRemainingHours();
 	float getGameMinutes();
+	float getGameSeconds();
 	float getGameHours();
 	float AngleToMinutes(float angle);
 	void AdjustTime(float MouseAnglerads, BOOL& grabbed);

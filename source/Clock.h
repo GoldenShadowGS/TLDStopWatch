@@ -47,6 +47,6 @@ private:
 	// Window Dragging Variables
 	BOOL dragging = FALSE;
 	POINT lastLocation = {};
-
-	std::chrono::time_point<std::chrono::steady_clock> mousedownTime;
+	float MouseRadialRatio = 0.0f;
+	//std::chrono::time_point<std::chrono::steady_clock> mousedownTime;
 };

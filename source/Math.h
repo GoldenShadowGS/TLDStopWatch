@@ -38,3 +38,10 @@ inline float GetAngleDistance(float angle1, float angle2)
 		dist = PI2 - dist;
 	return dist;
 }
+
+inline float GetPointDist(float x1, float y1, float x2, float y2)
+{
+	float x3 = x2 - x1;
+	float y3 = y2 - y1;
+	return sqrt((x3 * x3) + (y3 * y3));
+}

@@ -70,6 +70,12 @@ float Timer::getGameMinutes()
 	return (m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration) * InvTimeFactor;
 }
 
+float Timer::getGameSeconds()
+{
+	constexpr float secondsfactor = 60.0f * InvTimeFactor;
+	return (m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration) * secondsfactor;
+}
+
 float Timer::getAlarmMinutes()
 {
 	return m_AlarmMilliSeconds * InvTimeFactor;

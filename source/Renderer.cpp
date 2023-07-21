@@ -16,9 +16,12 @@ Renderer::~Renderer()
 	SafeRelease(&pBlackBrush);
 	SafeRelease(&pWhiteBrush);
 	SafeRelease(&pRedPinkBrush);
-	SafeRelease(&pGradientBrush1);
+	SafeRelease(&pGoColorBrush);
+	SafeRelease(&pAlarmHoverBrush);
 	SafeRelease(&pStopsCollection);
+	SafeRelease(&pStopsCollectionHover);
 	SafeRelease(&pRadialGradientBrush);
+	SafeRelease(&pRadialGradientBrushHover);
 }
 
 BOOL Renderer::Init(HWND hwnd, const ClockInfo& clockinfo, D2D1_RECT_F clientRect)
@@ -47,9 +50,13 @@ BOOL Renderer::Init(HWND hwnd, const ClockInfo& clockinfo, D2D1_RECT_F clientRec
 	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.02f, 0.02f, 0.02f, 1.0f), &pBlackBrush);
 	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(1.0f, 1.0f, 1.0f, 1.0f), &pWhiteBrush);
 	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.95f, 0.5f, 0.6f, 0.5f), &pRedPinkBrush);
+	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.79f, 0.67f, 0.9f, 1.0f), &pGoColorBrush);
+	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.75f, 0.64f, 0.86f, 1.0f), &pStopColorBrush);
+	hr = pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.75f, 0.1f, 0.1f, 1.0f), &pAlarmHoverBrush);
 
 	hr = pRenderTarget->CreateCompatibleRenderTarget(&pBitmapRenderTarget);
 
+	// Text Init
 	hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
 	if (FAILED(hr))
 		return false;
@@ -59,40 +66,47 @@ BOOL Renderer::Init(HWND hwnd, const ClockInfo& clockinfo, D2D1_RECT_F clientRec
 	if (FAILED(hr))
 		return false;
 
+	pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+
+	// Border Colors
 	D2D1_GRADIENT_STOP gstop[2] = {};
-	gstop[0].color = { 0.8f, 0.8f, 0.89f, 1.0f };
-	gstop[0].position = { 0.75f };
-	gstop[1].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	gstop[0].color = { 0.8f, 0.0f, 0.89f, 1.0f };
+	gstop[0].position = { 0.85f };
+	gstop[1].color = { 0.0f, 0.1f, 0.0f, 1.0f };
 	gstop[1].position = { 1.0f };
 	hr = pRenderTarget->CreateGradientStopCollection(gstop, 2, &pStopsCollection);
 	if (FAILED(hr))
 		return false;
 
-	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES gradprops = {};
-	gradprops.startPoint = { 0,0 };
-	gradprops.endPoint = { 500,500 };
-	D2D1_BRUSH_PROPERTIES brushprops = {};
-	brushprops.opacity = 1.0f;
-	brushprops.transform = D2D1::Matrix3x2F::Identity();
-	hr = pRenderTarget->CreateLinearGradientBrush(gradprops, brushprops, pStopsCollection, &pGradientBrush1);
+	gstop[0].color = { 0.9f, 0.0f, 0.95f, 1.0f };
+	gstop[0].position = { 0.85f };
+	gstop[1].color = { 0.0f, 0.1f, 0.0f, 1.0f };
+	gstop[1].position = { 1.0f };
+	hr = pRenderTarget->CreateGradientStopCollection(gstop, 2, &pStopsCollectionHover);
 	if (FAILED(hr))
 		return false;
 
 	hr = pRenderTarget->CreateRadialGradientBrush(
-		D2D1::RadialGradientBrushProperties(D2D1::Point2F(100, 100), D2D1::Point2F(0, 0), 400, 400), pStopsCollection, &pRadialGradientBrush);
+		D2D1::RadialGradientBrushProperties(D2D1::Point2F(clockinfo.centerX, clockinfo.centerY), D2D1::Point2F(0, 0), clockinfo.OuterRadius, clockinfo.OuterRadius), pStopsCollection, &pRadialGradientBrush);
+
+	hr = pRenderTarget->CreateRadialGradientBrush(
+		D2D1::RadialGradientBrushProperties(D2D1::Point2F(clockinfo.centerX, clockinfo.centerY), D2D1::Point2F(0, 0), clockinfo.OuterRadius, clockinfo.OuterRadius), pStopsCollectionHover, &pRadialGradientBrushHover);
 
 
+	// Bitmaps
 	minutehandbitmap = std::make_unique<Bitmap>();
+	minutehandhighlightedbitmap = std::make_unique<Bitmap>();
 	minutehandbitmapShadow = std::make_unique<Bitmap>();
 	hourhandbitmap = std::make_unique<Bitmap>();
 	hourhandbitmapShadow = std::make_unique<Bitmap>();
-
 
 	float scale = clockinfo.InnerRadius / 170.0f;
 	//pivot offsets
 	float offsetx = 0.0565476f;
 	float offsety = 0.486842f;
-	if (!minutehandbitmap->Load(pRenderTarget, IDBITMAP_MINUTEHAND, 245, 30, 20, offsetx, offsety, scale))
+	if (!minutehandbitmap->Load(pRenderTarget, IDBITMAP_MINUTEHAND, 250, 10, 10, offsetx, offsety, scale))
+		return false;
+	if (!minutehandhighlightedbitmap->Load(pRenderTarget, IDBITMAP_MINUTEHAND, 222, 234, 52, offsetx, offsety, scale))
 		return false;
 	offsetx = 0.278274f;
 	offsety = 0.503289f;
@@ -107,49 +121,37 @@ BOOL Renderer::Init(HWND hwnd, const ClockInfo& clockinfo, D2D1_RECT_F clientRec
 	if (!hourhandbitmapShadow->Load(pRenderTarget, IDBITMAP_HOURHANDSHADOW, 1, 1, 1, offsetx, offsety, scale))
 		return false;
 
+
+	// Alarm Arcs
 	arcRenderer.SetBrush(pRedPinkBrush);
 	arcRenderer.Setalpha(0.5f);
 
 	arcRendererThin.SetBrush(pBlackBrush);
 	arcRendererThin.Setalpha(0.75f);
 
-	pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-
-	//ClockNumbers.reserve(12);
-	////constexpr float TwoPi = 2.0f * 3.141592f;
-	//constexpr float anglesegment = ((float)1.0f / 12.0f) * PI2;
-	////constexpr float offsetangle = 0.18f;
-	//for (int i = 0; i < 12; i++)
-	//{
-	//	float angle = ((float)i / 12.0f) * PI2 + anglesegment;
-	//	float x = sin(angle) * 95.0f;
-	//	float y = -cos(angle) * 95.0f;
-	//	ClockNumbers.emplace_back(pTextFormat, x, y, 30.0f, 30.0f, 1.0f);
-	//	ClockNumbers.back().SetText(std::to_wstring((i + 1) * 5));
-	//}
-
-	RenderBackGround(clockinfo);
-	if (!pBackGroundBitmap)
-		return false;
-
 	return true;
 }
 
-void Renderer::Render(const ClockInfo& clockinfo)
+void Renderer::Render(ClockInfo& clockinfo)
 {
 	if (pRenderTarget)
 	{
 		pRenderTarget->BeginDraw();
 		pRenderTarget->SetTransform(D2D1::IdentityMatrix());
 
+		if (clockinfo.RedrawBackGround)
+		{
+			RenderBackGround(clockinfo, &pBackGroundBitmap, (clockinfo.Timing ? pGoColorBrush : pStopColorBrush), (clockinfo.BorderHover ? pRadialGradientBrushHover : pRadialGradientBrush));
+			clockinfo.RedrawBackGround = FALSE;
+		}
 		if (pBackGroundBitmap)
 			pRenderTarget->DrawBitmap(pBackGroundBitmap, m_ClientRect);
 
-		if (clockinfo.AlarmSet)
+		float scale = clockinfo.OuterRadius / 200.0f;
+		float radius = clockinfo.InnerRadius;
+		if (clockinfo.AlarmSet || clockinfo.AlarmHover)
 		{
-			float radius = clockinfo.InnerRadius;
 			D2D1_ELLIPSE ellipse = { { clockinfo.centerX,  clockinfo.centerY }, radius, radius };
-			float scale = clockinfo.OuterRadius / 200.0f;
 			float circleRadius = radius + 6.5f * scale;
 			const float segmentradius = circleRadius / 15.0f;
 			const float halfsegmentradius = segmentradius / 2.0f;
@@ -181,16 +183,35 @@ void Renderer::Render(const ClockInfo& clockinfo)
 			float alarmAngle = Rad2Deg(clockinfo.alarmAngleRad);
 			D2D1_POINT_2F centerpoint = { clockinfo.centerX, clockinfo.centerY };
 			D2D1_POINT_2F point1 = { clockinfo.centerX + radius - ((clockinfo.wraps + 1) * segmentradius), clockinfo.centerY };
-			D2D1_POINT_2F point2 = { clockinfo.centerX + radius + segmentradius * 2.0f, clockinfo.centerY };
+			D2D1_POINT_2F point2 = { clockinfo.centerX + radius , clockinfo.centerY };
 			pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(alarmAngle, centerpoint));
-			pRenderTarget->DrawLine(point1, point2, pBlackBrush, 3.0f);
+			pRenderTarget->DrawLine(point1, point2, clockinfo.AlarmHover ? pAlarmHoverBrush : pBlackBrush, clockinfo.AlarmHover ? 6.0f : 3.0f);
 		}
+
+
+		// Second Hand
+		pRenderTarget->SetTransform(D2D1::IdentityMatrix());
+		float secanglecos = cos(clockinfo.secAngleRad);
+		float secanglesin = sin(clockinfo.secAngleRad);
+		float radius1 = radius * -0.25f;
+		float radius2 = radius * 0.9f;
+		D2D1_POINT_2F point1 = { clockinfo.centerX + secanglecos * radius1, secanglesin * radius1 + clockinfo.centerY };
+		D2D1_POINT_2F point2 = { clockinfo.centerX + secanglecos * radius2, secanglesin * radius2 + clockinfo.centerY };
+		pRenderTarget->DrawLine(point1, point2, pBlackBrush, 3.0f * scale);
+
 
 		// Draw Bitmap Clock Hands
 		minutehandbitmapShadow->Draw(pRenderTarget, clockinfo.minuteAngle, clockinfo.centerX + clockinfo.shadowoffsetx, clockinfo.centerY + clockinfo.shadowoffsety);
 		hourhandbitmapShadow->Draw(pRenderTarget, clockinfo.hourAngle, clockinfo.centerX + clockinfo.shadowoffsetx, clockinfo.centerY + clockinfo.shadowoffsety);
 		hourhandbitmap->Draw(pRenderTarget, clockinfo.hourAngle, clockinfo.centerX, clockinfo.centerY);
-		minutehandbitmap->Draw(pRenderTarget, clockinfo.minuteAngle, clockinfo.centerX, clockinfo.centerY);
+		if (clockinfo.HandHover)
+			minutehandhighlightedbitmap->Draw(pRenderTarget, clockinfo.minuteAngle, clockinfo.centerX, clockinfo.centerY);
+		else
+			minutehandbitmap->Draw(pRenderTarget, clockinfo.minuteAngle, clockinfo.centerX, clockinfo.centerY);
+
+		//pRenderTarget->SetTransform(D2D1::IdentityMatrix());
+		//D2D1_ELLIPSE ellipse = { { clockinfo.centerX,  clockinfo.centerY }, 20, 20 };
+		//pRenderTarget->DrawEllipse(ellipse, pBlackBrush, 1.0f);
 
 
 		//pRenderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
@@ -204,7 +225,7 @@ void Renderer::Render(const ClockInfo& clockinfo)
 	}
 }
 
-void Renderer::RenderBackGround(const ClockInfo& clockinfo)
+void Renderer::RenderBackGround(const ClockInfo& clockinfo, ID2D1Bitmap** pBitmap, ID2D1SolidColorBrush* pBKGBrush, ID2D1RadialGradientBrush* pRadialBrush)
 {
 	if (pBitmapRenderTarget)
 	{
@@ -215,19 +236,19 @@ void Renderer::RenderBackGround(const ClockInfo& clockinfo)
 		float scale = clockinfo.OuterRadius / 200.0f;
 		D2D1_POINT_2F center = { clockinfo.centerX,  clockinfo.centerY };
 		D2D1_ELLIPSE ellipse = {};
-		float radius = clockinfo.OuterRadius;
+		float radius = clockinfo.OuterRadius - 36.0f * scale * 0.5f;
 		ellipse.radiusX = radius;
 		ellipse.radiusY = radius;
 		ellipse.point = center;
-		pRadialGradientBrush->SetCenter(center);
-		pRadialGradientBrush->SetRadiusX(clockinfo.OuterRadius);
-		pRadialGradientBrush->SetRadiusY(clockinfo.OuterRadius);
-		pBitmapRenderTarget->DrawEllipse(ellipse, pRadialGradientBrush, 36.0f * scale);
+		pRadialBrush->SetCenter(center);
+		pRadialBrush->SetRadiusX(clockinfo.OuterRadius);
+		pRadialBrush->SetRadiusY(clockinfo.OuterRadius);
+		pBitmapRenderTarget->DrawEllipse(ellipse, pRadialBrush, 36.0f * scale);
 		radius = clockinfo.InnerRadius;
 		ellipse.radiusX = radius;
 		ellipse.radiusY = radius;
 		pBitmapRenderTarget->DrawEllipse(ellipse, pBlackBrush, 4.0f * scale);
-		pBitmapRenderTarget->FillEllipse(ellipse, pWhiteBrush);
+		pBitmapRenderTarget->FillEllipse(ellipse, pBKGBrush);
 
 		// Draw Large Ticks
 		for (int i = 0; i < 12; i++)
@@ -269,6 +290,6 @@ void Renderer::RenderBackGround(const ClockInfo& clockinfo)
 
 		HRESULT hr = pBitmapRenderTarget->EndDraw();
 
-		hr = pBitmapRenderTarget->GetBitmap(&pBackGroundBitmap);
+		hr = pBitmapRenderTarget->GetBitmap(pBitmap);
 	}
 }
