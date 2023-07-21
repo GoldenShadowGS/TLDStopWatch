@@ -3,8 +3,8 @@
 #include "Math.h"
 #include "Sound.h"
 
-extern BOOL MinuteHandleGrabbed;
-extern BOOL AlarmHandleGrabbed;
+//extern BOOL MinuteHandleGrabbed;
+//extern BOOL AlarmHandleGrabbed;
 
 constexpr float TimeFactor = 5000.0f;
 constexpr INT64 I64TimeFactor = (INT64)TimeFactor;
@@ -116,7 +116,7 @@ float GetMinuteDistance(float min1, float min2)
 	return dist;
 }
 
-void Timer::AdjustTime(float MouseAnglerads)
+void Timer::AdjustTime(float MouseAnglerads, BOOL& grabbed)
 {
 	INT64 CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
 	BOOL AlarmOFF = (m_AlarmMilliSeconds <= CurrentMS);
@@ -133,35 +133,40 @@ void Timer::AdjustTime(float MouseAnglerads)
 	if (CurrentMS < 0)
 	{
 		m_AccumulatedMilliSecondsDuration = -m_CurrentMilliSecondsDuration;
-		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 15.0f)
-		{
-			MinuteHandleGrabbed = FALSE;
-		}
+		CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
+		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
+			grabbed = FALSE;
 	}
 	if (m_AlarmMilliSeconds < CurrentMS || AlarmOFF)
 		m_AlarmMilliSeconds = CurrentMS;
 }
 
-void Timer::AdjustAlarmTime(float MouseAnglerads)
+void Timer::AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed)
 {
 	float alarmminutes = getAlarmMinutes();
 	float timerminute = getGameMinutes();
 	BOOL zeroed = FALSE;
 	if (alarmminutes <= timerminute)
-	{
 		zeroed = TRUE;
-	}
 	float currentminutes = fmod(getAlarmMinutes(), 60.0f);
 	float newminutes = fmod(AngleToMinutes(MouseAnglerads + HalfPI), 60.0f);
 	float minutesRange = newminutes - currentminutes;
-	if (abs(GetMinuteDistance(currentminutes, newminutes)) > 15.0f && zeroed)
-	{
-		AlarmHandleGrabbed = FALSE;
-	}
+	if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f && zeroed)
+		grabbed = FALSE;
 	if (minutesRange > 30.0f)
 		minutesRange -= 60.0f;
 	if (minutesRange < -30.0f)
 		minutesRange += 60.0f;
 	m_AlarmMilliSeconds += MinutesToMilliseconds(minutesRange);
+	INT64 CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
+	if (m_AlarmMilliSeconds < CurrentMS)
+		m_AlarmMilliSeconds = CurrentMS;
+	INT64 LongestTime = CurrentMS + MinutesToMilliseconds(720);
+	if (m_AlarmMilliSeconds > LongestTime)
+	{
+		m_AlarmMilliSeconds = LongestTime;
+		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
+			grabbed = FALSE;
+	}
 	m_AlarmMilliSeconds = RoundToMinute(m_AlarmMilliSeconds);
 }

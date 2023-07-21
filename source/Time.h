@@ -34,8 +34,8 @@ public:
 	float getGameMinutes();
 	float getGameHours();
 	float AngleToMinutes(float angle);
-	void AdjustTime(float MouseAnglerads);
-	void AdjustAlarmTime(float MouseAnglerads);
+	void AdjustTime(float MouseAnglerads, BOOL& grabbed);
+	void AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed);
 	void ResetAlarm() { m_AlarmMilliSeconds = 0; }
 	BOOL isTiming() { return Timing; }
 	BOOL isSuspended() { return Suspended; }

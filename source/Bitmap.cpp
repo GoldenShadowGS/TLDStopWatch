@@ -3,11 +3,12 @@
 #include "Bitmap.h"
 #include "Resource.h"
 #include "ResourceLoader.h"
+#include "Renderer.h"
 
 Bitmap::Bitmap()
 {}
 
-bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty)
+bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float scale)
 {
 	FileLoader(resource);
 	m_ExpandedPixels.resize(m_RawPixels.size() * 4);
@@ -24,8 +25,10 @@ bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE 
 	m_Pivot = D2D1::Point2F(pivotx, pivoty);
 
 	D2D1_SIZE_U bitmapsize = {};
-	bitmapsize.width = m_Width;
-	bitmapsize.height = m_Height;
+	bitmapsize.width = m_PixelWidth;
+	bitmapsize.height = m_PixelHeight;
+	m_Size.width = (float)m_PixelWidth;
+	m_Size.height = (float)m_PixelHeight;
 
 	D2D1_BITMAP_PROPERTIES bitmapprops = {};
 	bitmapprops.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -35,25 +38,43 @@ bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE 
 	HRESULT hr = rt->CreateBitmap(bitmapsize, m_ExpandedPixels.data(), m_Pitch, bitmapprops, &pBitmap);
 	if (FAILED(hr))
 		return false;
+	//Rescale
+	if (scale != 1.0f)
+	{
+		ID2D1Bitmap* pScaledBitmap = nullptr;
+		D2D1_SIZE_F scaledsize = { bitmapsize.width * scale, bitmapsize.height * scale };
+		hr = rt->CreateCompatibleRenderTarget(scaledsize, &pBitmapRenderTarget);
+
+		pBitmapRenderTarget->BeginDraw();
+
+		D2D1_RECT_F BitmapRect = { 0.0f, 0.0f, scaledsize.width, scaledsize.height };
+		pBitmapRenderTarget->DrawBitmap(pBitmap, BitmapRect);
+		hr = pBitmapRenderTarget->EndDraw();
+
+		//After Drawing, retrieve the bitmap from the render target
+		hr = pBitmapRenderTarget->GetBitmap(&pScaledBitmap);
+		SafeRelease(&pBitmap);
+		SafeRelease(&pBitmapRenderTarget);
+		if (pScaledBitmap)
+		{
+			pBitmap = pScaledBitmap;
+			m_Size = pBitmap->GetSize();
+		}
+	}
 	return true;
 }
 
-void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float scale, float x, float y, float width, float height)
+void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y)
 {
 	if (pBitmap)
 	{
-		D2D1_POINT_2F Pivot = { m_Pivot.x + x, m_Pivot.y + y };
-		rt->SetTransform(
-			D2D1::Matrix3x2F::Rotation(angle-90, Pivot) *
-			D2D1::Matrix3x2F::Translation(-m_Pivot.x, -m_Pivot.y) *
-			D2D1::Matrix3x2F::Scale(scale, scale) *
-			D2D1::Matrix3x2F::Translation((1.0f - scale) * x, (1.0f - scale) * y));
+		const float offsetx = m_Pivot.x * m_Size.width;
+		const float offsety = m_Pivot.y * m_Size.height;
+		D2D1_POINT_2F Pivot = { offsetx + x, offsety + y };
+		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle - 90, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
 
-		D2D1_RECT_F rect;
-		if (width == 0.0f || height == 0.0f)
-			rect = D2D1::RectF(x, y, x + (float)m_Width, y + (float)m_Height);
-		else
-			rect = D2D1::RectF(x, y, x + width, y + height);
+		D2D1_RECT_F	rect = D2D1::RectF(x, y, x + m_Size.width, y + m_Size.height);
+
 		rt->DrawBitmap(pBitmap, rect, 1.0f);
 	}
 }
@@ -103,8 +124,8 @@ bool Bitmap::FileLoader(int resource)
 	resLoader.Read(&dibHeader.pixelcompression, sizeof(dibHeader.pixelcompression));
 	resLoader.Read(&dibHeader.rawPixelDataSize, sizeof(dibHeader.rawPixelDataSize));
 
-	m_Width = dibHeader.width;
-	m_Height = dibHeader.height;
+	m_PixelWidth = dibHeader.width;
+	m_PixelHeight = dibHeader.height;
 	m_Pitch = Align(dibHeader.width * 4, 16);
 
 	const size_t buffersize = dibHeader.rawPixelDataSize;

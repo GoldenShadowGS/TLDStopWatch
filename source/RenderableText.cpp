@@ -1,7 +1,7 @@
 #include "PCH.h"
 #include "RenderableText.h"
 
-
+// TODO ReWrite this class
 RenderableText::RenderableText(IDWriteTextFormat* pFormat, float x, float y, float sx, float sy, float s) : pTextFormat(pFormat), m_x(x), m_y(y), m_sx(sx), m_sy(sy)
 {
 	m_Rect = D2D1::RectF(x - sx / 2.0f, y - sy / 2.0f, x + sx / 2.0f, y + sy / 2.0f);

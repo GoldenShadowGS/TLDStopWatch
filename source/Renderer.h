@@ -6,6 +6,15 @@
 #include "Input.h"
 #include "Resource.h"
 
+template <class T> void SafeRelease(T** ppT)
+{
+	if (*ppT)
+	{
+		(*ppT)->Release();
+		*ppT = NULL;
+	}
+}
+
 struct ClockInfo
 {
 	//hands
@@ -18,14 +27,10 @@ struct ClockInfo
 	float rangeAngleRad = 0.0f;
 	int wraps = 0;
 	BOOL AlarmSet = FALSE;
-	//float highlightAngle = 0.0f;
-	//BOOL TimerActive = FALSE;
-	float minuteshadowoffsetx = 5.0f;
-	float minuteshadowoffsety = 6.0f;
-	float hourshadowoffsetx = 1.75f;
-	float hourshadowoffsety = 1.5f;
-	float scale = 1.0f;
-
+	float shadowoffsetx = 5.0f;
+	float shadowoffsety = 6.0f;
+	float InnerRadius = 0.0f;
+	float OuterRadius = 0.0f;
 };
 
 class Renderer
@@ -33,7 +38,7 @@ class Renderer
 public:
 	Renderer();
 	~Renderer();
-	BOOL Init(HWND hwnd, const ClockInfo& clockinfo);
+	BOOL Init(HWND hwnd, const ClockInfo& clockinfo, D2D1_RECT_F clientRect);
 	void Render(const ClockInfo& clockinfo);
 private:
 	void RenderBackGround(const ClockInfo& clockinfo);
@@ -50,7 +55,7 @@ private:
 	ID2D1GradientStopCollection* pStopsCollection = nullptr;
 	ID2D1RadialGradientBrush* pRadialGradientBrush = nullptr;
 
-	D2D1::ColorF ClearColor = D2D1::ColorF::Green;
+	D2D1::ColorF ClearColor = {0.0f,0.0f,0.0f};
 
 	IDWriteFactory* pDWriteFactory = nullptr;
 	IDWriteTextFormat* pTextFormat = nullptr;
@@ -63,5 +68,5 @@ private:
 	std::unique_ptr<Bitmap> minutehandbitmapShadow;
 	std::unique_ptr<Bitmap> hourhandbitmapShadow;
 
-	std::vector<RenderableText> ClockNumbers;
+	D2D1_RECT_F m_ClientRect = {};
 };

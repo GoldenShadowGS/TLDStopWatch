@@ -31,15 +31,10 @@ inline float angleNormalize(float angle)
 	return angle;
 }
 
-//inline float minutesNormalize(float minutes)
-//{
-//	while (minutes < 0.0f)
-//	{
-//		minutes += 60.0f;
-//	}
-//	while (minutes > 60.0f)
-//	{
-//		minutes -= 60.0f;
-//	}
-//	return minutes;
-//}
+inline float GetAngleDistance(float angle1, float angle2)
+{
+	float dist = abs(angle1 - angle2);
+	if (dist > PI)
+		dist = PI2 - dist;
+	return dist;
+}

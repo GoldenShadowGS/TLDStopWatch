@@ -6,6 +6,9 @@
 #define IDD_THELONGDARKSTOPWATCH_DIALOG 102
 #define IDS_APP_TITLE                   103
 
+#define IDI_STOPWATCHICON               110
+#define IDI_SMALLICON                   111
+
 #define IDFORMAT_TIMEDAYS               220
 #define IDFORMAT_TIMEHOURS              221
 
