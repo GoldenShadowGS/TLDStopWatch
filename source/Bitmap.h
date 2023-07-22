@@ -1,6 +1,13 @@
 #pragma once
 #include "PCH.h"
 
+struct Sprite
+{
+	UINT rows;
+	UINT cols;
+	float spritewidth;
+	float spriteheight;
+};
 
 class Bitmap
 {
@@ -18,6 +25,7 @@ public:
 	Bitmap();
 	bool Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float scale);
 	void Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y);
+	void DrawSprite(ID2D1HwndRenderTarget* rt, UINT index, const Sprite& sprite, float angle, float x, float y);
 private:
 	bool FileLoader(int resource);
 };

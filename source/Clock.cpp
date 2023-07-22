@@ -13,7 +13,7 @@ BOOL ClockApp::Init(HINSTANCE hInstance, int nCmdShow)
 
 	DWORD style = WS_POPUP; // WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX    // WS_POPUP
 	DWORD exstyle = WS_EX_LAYERED; // WS_EX_LAYERED
-	m_ClientSize = 300;  // 250
+	m_ClientSize = 200;  // 250
 	RECT winrect = { 0, 0, m_ClientSize, m_ClientSize };
 	AdjustWindowRectEx(&winrect, style, false, exstyle);
 
@@ -37,7 +37,7 @@ BOOL ClockApp::Init(HINSTANCE hInstance, int nCmdShow)
 
 
 	m_Clockinfo.OuterRadius = m_ClientSize / 2.0f;
-	m_Clockinfo.InnerRadius = m_Clockinfo.OuterRadius * 0.9f;
+	m_Clockinfo.InnerRadius = m_Clockinfo.OuterRadius * 0.85f;
 	m_Clockinfo.minuteAngle = 270;
 	m_Clockinfo.hourAngle = 270;
 	m_Clockinfo.centerX = float(m_ClientSize) / 2.0f;
@@ -126,51 +126,56 @@ void ClockApp::SoundUpdate()
 {
 	static BOOL AlarmHandleGrabbedPrev = FALSE;
 	static BOOL MinuteHandleGrabbedPrev = FALSE;
-	if (AlarmHandleGrabbedPrev != AlarmHandleGrabbed)
+	if (AlarmHandleGrabbedPrev != m_Clockinfo.AlarmHandleGrabbed)
 	{
-		AlarmHandleGrabbedPrev = AlarmHandleGrabbed;
+		AlarmHandleGrabbedPrev = m_Clockinfo.AlarmHandleGrabbed;
 		m_soundManager.Play(Click1, 0.1f);
 	}
-	if (MinuteHandleGrabbedPrev != MinuteHandleGrabbed)
+	if (MinuteHandleGrabbedPrev != m_Clockinfo.MinuteHandleGrabbed)
 	{
-		MinuteHandleGrabbedPrev = MinuteHandleGrabbed;
+		MinuteHandleGrabbedPrev = m_Clockinfo.MinuteHandleGrabbed;
 		m_soundManager.Play(Click2, 0.1f);
 	}
 }
 
 void ClockApp::update()
 {
+	static BOOL AlarmSet = FALSE;
+	std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
+	INT64 duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - LastMouseMovedTime).count();
+	MouseTimeout = (duration > 1500);
+
 	float radialDist = GetPointDist(m_Input.mousepos.X, m_Input.mousepos.Y, m_Clockinfo.centerX, m_Clockinfo.centerY);
 	MouseRadialRatio = radialDist / m_Clockinfo.InnerRadius;
 
+	// Gets the wedge slice of the angle and multiplies it with cursor distance to the center to de-wedge it
 	float angleDist = GetAngleDistance(m_MouseAngle, m_Clockinfo.minAngleRad);
-	m_Clockinfo.HandHover = ((!AlarmHandleGrabbed && angleDist * MouseRadialRatio < 0.1f && MouseRadialRatio > 0.07f && MouseRadialRatio < 1.0f) || MinuteHandleGrabbed) ? TRUE : FALSE;
-
+	m_Clockinfo.HandHover = ((!m_Clockinfo.AlarmHandleGrabbed && angleDist * MouseRadialRatio < 0.1f && MouseRadialRatio > 0.07f && MouseRadialRatio < 1.0f && !MouseTimeout) || m_Clockinfo.MinuteHandleGrabbed) ? TRUE : FALSE;
 	float alarmAngleDist = GetAngleDistance(m_MouseAngle, m_Clockinfo.alarmAngleRad);
-	m_Clockinfo.AlarmHover = ((!MinuteHandleGrabbed && alarmAngleDist * MouseRadialRatio < 0.1f && MouseRadialRatio > 0.07f) || AlarmHandleGrabbed) ? TRUE : FALSE;
+	float alarmGrabRadiusRange = m_Clockinfo.AlarmSet ? 1.0f - ((m_Clockinfo.wraps + 1) / 15.0f) : 0.07f;
+	m_Clockinfo.AlarmHover = ((!m_Clockinfo.MinuteHandleGrabbed && alarmAngleDist * MouseRadialRatio < 0.1f && MouseRadialRatio > alarmGrabRadiusRange && MouseRadialRatio < 1.0f && !MouseTimeout) || m_Clockinfo.AlarmHandleGrabbed) ? TRUE : FALSE;
 
-	static BOOL AlarmSet = FALSE;
 	if (m_Timer.isTiming() && !m_Timer.isSuspended())
 	{
 		m_Timer.update();
-		if (m_Timer.getGameMinutes() >= m_Timer.getAlarmMinutes() && AlarmSet && !AlarmHandleGrabbed && !MinuteHandleGrabbed)
+		if (m_Timer.getGameMinutes() >= m_Timer.getAlarmMinutes() && AlarmSet && !m_Clockinfo.AlarmHandleGrabbed && !m_Clockinfo.MinuteHandleGrabbed)
 		{
 			m_soundManager.Play(Alarm, 1.0f);
 			AlarmSet = FALSE;
 			m_Timer.ResetAlarm();
 		}
 	}
-	if (AlarmHandleGrabbed)
+	if (m_Clockinfo.AlarmHandleGrabbed)
 	{
-		m_Timer.AdjustAlarmTime(m_MouseAngle, AlarmHandleGrabbed);
+		m_Timer.AdjustAlarmTime(m_MouseAngle, m_Clockinfo.AlarmHandleGrabbed);
 		if (m_Timer.getAlarmMinutes() > m_Timer.getGameMinutes())
 			AlarmSet = TRUE;
 		else
 			AlarmSet = FALSE;
 	}
-	if (MinuteHandleGrabbed)
+	if (m_Clockinfo.MinuteHandleGrabbed)
 	{
-		m_Timer.AdjustTime(m_MouseAngle, MinuteHandleGrabbed);
+		m_Timer.AdjustTime(m_MouseAngle, m_Clockinfo.MinuteHandleGrabbed);
 		if (m_Timer.getAlarmMinutes() > m_Timer.getGameMinutes())
 			AlarmSet = TRUE;
 		else
@@ -180,9 +185,9 @@ void ClockApp::update()
 	setClockInfo();
 	SoundUpdate();
 	//Debug Title Text
-	std::wstring title = L"TLD StopWatch " + std::to_wstring((int)m_Timer.getGameHours()) + L"h " + std::to_wstring((int)m_Timer.getGameMinutes() % 60) + L"m " +
-		L"Alarm: " + std::to_wstring((int)m_Timer.getAlarmMinutes()) + L"m " + std::to_wstring(m_Timer.getGameSeconds());
-	SetWindowTextW(hMainWindow, title.c_str());
+	//std::wstring title = L"TLD StopWatch " + std::to_wstring((int)m_Timer.getGameHours()) + L"h " + std::to_wstring((int)m_Timer.getGameMinutes() % 60) + L"m " +
+	//	L"Alarm: " + std::to_wstring((int)m_Timer.getAlarmMinutes()) + L"m " + std::to_wstring(m_Timer.getGameSeconds());
+	//SetWindowTextW(hMainWindow, title.c_str());
 }
 
 LRESULT CALLBACK ClockApp::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -206,29 +211,47 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 	break;
 	case WM_KILLFOCUS:
 	{
-		AlarmHandleGrabbed = FALSE;
-		MinuteHandleGrabbed = FALSE;
+		m_Clockinfo.AlarmHandleGrabbed = FALSE;
+		m_Clockinfo.MinuteHandleGrabbed = FALSE;
+		dragging = FALSE;
+		MouseinWindow = FALSE;
+		m_Clockinfo.BorderHighlight = FALSE;
+		m_Clockinfo.RedrawBackGround = TRUE;
+	}
+	break;
+	case WM_MOUSELEAVE:
+	{
+		m_Clockinfo.BorderHighlight = FALSE;
+		MouseinWindow = FALSE;
+		m_Clockinfo.RedrawBackGround = TRUE;
 	}
 	break;
 	case WM_MOUSEMOVE:
 	{
+		LastMouseMovedTime = std::chrono::steady_clock::now();
+		if (!MouseinWindow)
+		{
+			TRACKMOUSEEVENT mouseEvent = { sizeof(TRACKMOUSEEVENT),TME_LEAVE,hMainWindow, HOVER_DEFAULT };
+			TrackMouseEvent(&mouseEvent);
+			MouseinWindow = TRUE;
+		}
 		m_Input.mousepos.X = (float)GET_X_LPARAM(lParam);
 		m_Input.mousepos.Y = (float)GET_Y_LPARAM(lParam);
 		m_MouseAngle = fmod(getMouseAngle(m_Input.mousepos, m_Clockinfo.centerX, m_Clockinfo.centerY) + PI3_4, PI2);
 
-		if (MouseRadialRatio > 1.0f)
+		if (MouseRadialRatio > 1.0f && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed)
 		{
-			if (!m_Clockinfo.BorderHover)
+			if (!m_Clockinfo.BorderHighlight)
 			{
-				m_Clockinfo.BorderHover = TRUE;
+				m_Clockinfo.BorderHighlight = TRUE;
 				m_Clockinfo.RedrawBackGround = TRUE;
 			}
 		}
 		else
 		{
-			if (m_Clockinfo.BorderHover)
+			if (m_Clockinfo.BorderHighlight)
 			{
-				m_Clockinfo.BorderHover = FALSE;
+				m_Clockinfo.BorderHighlight = FALSE;
 				m_Clockinfo.RedrawBackGround = TRUE;
 			}
 		}
@@ -249,8 +272,9 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 		if (m_Clockinfo.HandHover)
 		{
 			m_Timer.SuspendTimer();
-			MinuteHandleGrabbed = TRUE;
-			AlarmHandleGrabbed = FALSE;
+			m_Clockinfo.MinuteHandleGrabbed = TRUE;
+			m_Clockinfo.AlarmHandleGrabbed = FALSE;
+			CanStartTimer = FALSE;
 		}
 		else if (MouseRadialRatio > 1.0f) // Dragging Window if on Clock Border
 		{
@@ -260,12 +284,8 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 			GetWindowRect(hWnd, &rect);
 			lastLocation.x = lastLocation.x - rect.left;
 			lastLocation.y = lastLocation.y - rect.top;
+			CanStartTimer = FALSE;
 		}
-		else // Toggle StopWatch timer
-		{
-			ToggleTimer();
-		}
-		//mousedownTime = std::chrono::steady_clock::now();
 	}
 	break;
 	case WM_LBUTTONUP:
@@ -275,14 +295,13 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 		{
 			m_Timer.ResumeTimer();
 		}
-		MinuteHandleGrabbed = FALSE;
+		m_Clockinfo.MinuteHandleGrabbed = FALSE;
 		dragging = FALSE;
-
-		//std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
-		//INT64 duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - mousedownTime).count();
-		//if (duration < 250)
-		//	ToggleTimer();
-
+		if (MouseRadialRatio < 1.0f && !m_Clockinfo.HandHover && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed && CanStartTimer)
+		{
+			ToggleTimer();
+		}
+		CanStartTimer = TRUE;
 		// Close the App
 		//if (m_Input.mousepos.X > m_ClientSize - 50 && m_Input.mousepos.Y < 50)
 		//	SendMessage(hWnd, WM_CLOSE, 0, 0);
@@ -290,50 +309,26 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 	break;
 	case WM_MBUTTONDOWN:
 	{
-		//ToggleTimer();
-
-
-		//AlarmHandleGrabbed = (GetAngleDistance(m_MouseAngle, m_Clockinfo.alarmAngleRad) < 0.4f) ? TRUE : FALSE;
-		//if (AlarmHandleGrabbed)
-		//	SetCapture(hWnd);
-		//MinuteHandleGrabbed = FALSE;
 	}
 	break;
 	case WM_MBUTTONUP:
 	{
-		//ReleaseCapture();
-		//AlarmHandleGrabbed = FALSE;
 	}
 	break;
 	case WM_RBUTTONDOWN:
 	{
-		if (m_Clockinfo.AlarmHover)   // = (GetAngleDistance(m_MouseAngle, m_Clockinfo.alarmAngleRad) < 0.4f) ? TRUE : FALSE;
+		if (m_Clockinfo.AlarmHover)
 		{
 			SetCapture(hWnd);
-			AlarmHandleGrabbed = TRUE;
-			MinuteHandleGrabbed = FALSE;
+			m_Clockinfo.AlarmHandleGrabbed = TRUE;
+			m_Clockinfo.MinuteHandleGrabbed = FALSE;
 		}
-		//if (m_Clockinfo.HandHover)
-		//	//	MinuteHandleGrabbed = (GetAngleDistance(m_MouseAngle, m_Clockinfo.minAngleRad) < 0.4f) ? TRUE : FALSE;
-		//	//if (MinuteHandleGrabbed)
-		//{
-		//	MinuteHandleGrabbed = TRUE;
-		//	m_Timer.SuspendTimer();
-		//	SetCapture(hWnd);
-		//}
-		//AlarmHandleGrabbed = FALSE;
 	}
 	break;
 	case WM_RBUTTONUP:
 	{
 		ReleaseCapture();
-		AlarmHandleGrabbed = FALSE;
-		//ReleaseCapture();
-		//if (m_Timer.isSuspended())
-		//{
-		//	m_Timer.ResumeTimer();
-		//}
-		//MinuteHandleGrabbed = FALSE;
+		m_Clockinfo.AlarmHandleGrabbed = FALSE;
 	}
 	break;
 	case WM_DESTROY:

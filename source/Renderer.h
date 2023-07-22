@@ -34,9 +34,11 @@ struct ClockInfo
 	float OuterRadius = 0.0f;
 	BOOL HandHover = FALSE;
 	BOOL AlarmHover = FALSE;
-	BOOL BorderHover = FALSE;
+	BOOL BorderHighlight = FALSE;
 	BOOL RedrawBackGround = TRUE;
 	BOOL Timing = FALSE;
+	BOOL MinuteHandleGrabbed = FALSE;
+	BOOL AlarmHandleGrabbed = FALSE;
 };
 
 class Renderer
@@ -59,7 +61,6 @@ private:
 	ID2D1SolidColorBrush* pGoColorBrush = nullptr;
 	ID2D1SolidColorBrush* pStopColorBrush = nullptr;
 	ID2D1SolidColorBrush* pAlarmHoverBrush = nullptr;
-	//ID2D1LinearGradientBrush* pGradientBrush1 = nullptr;
 	ID2D1GradientStopCollection* pStopsCollection = nullptr;
 	ID2D1GradientStopCollection* pStopsCollectionHover = nullptr;
 	ID2D1RadialGradientBrush* pRadialGradientBrush = nullptr;
@@ -78,6 +79,7 @@ private:
 	std::unique_ptr<Bitmap> hourhandbitmap;
 	std::unique_ptr<Bitmap> minutehandbitmapShadow;
 	std::unique_ptr<Bitmap> hourhandbitmapShadow;
+	std::unique_ptr<Bitmap> UIbitmap;
 
 	D2D1_RECT_F m_ClientRect = {};
 };

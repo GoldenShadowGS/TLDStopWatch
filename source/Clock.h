@@ -15,8 +15,6 @@ public:
 	void update();
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	void StopMinuteHandGrab() { MinuteHandleGrabbed = FALSE; }
-	void StopAlarmGrab() { AlarmHandleGrabbed = FALSE; }
 private:
 	void setClockInfo();
 	void ToggleTimer();
@@ -41,12 +39,15 @@ private:
 	WavFile Click2;
 	const WCHAR* m_Title = L"TLD StopWatch";
 	const WCHAR* m_WindowClass = L"TLDTimerWindowsClass";
-	BOOL MinuteHandleGrabbed = FALSE;
-	BOOL AlarmHandleGrabbed = FALSE;
+	//BOOL MinuteHandleGrabbed = FALSE;
+	//BOOL AlarmHandleGrabbed = FALSE;
 
 	// Window Dragging Variables
 	BOOL dragging = FALSE;
 	POINT lastLocation = {};
 	float MouseRadialRatio = 0.0f;
-	//std::chrono::time_point<std::chrono::steady_clock> mousedownTime;
+	BOOL MouseinWindow = FALSE;
+	BOOL CanStartTimer = TRUE;
+	BOOL MouseTimeout = FALSE;
+	std::chrono::time_point<std::chrono::steady_clock> LastMouseMovedTime;
 };

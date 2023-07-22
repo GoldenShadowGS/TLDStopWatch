@@ -143,6 +143,14 @@ void Timer::AdjustTime(float MouseAnglerads, BOOL& grabbed)
 		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
 			grabbed = FALSE;
 	}
+	{
+		INT64 LongestAlarmTime = CurrentMS + MinutesToMilliseconds(720);
+		if (m_AlarmMilliSeconds > LongestAlarmTime)
+		{
+			m_AlarmMilliSeconds = LongestAlarmTime;
+			m_AlarmMilliSeconds = RoundToMinute(m_AlarmMilliSeconds);
+		}
+	}
 	if (m_AlarmMilliSeconds < CurrentMS || AlarmOFF)
 		m_AlarmMilliSeconds = CurrentMS;
 }
@@ -167,10 +175,10 @@ void Timer::AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed)
 	INT64 CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
 	if (m_AlarmMilliSeconds < CurrentMS)
 		m_AlarmMilliSeconds = CurrentMS;
-	INT64 LongestTime = CurrentMS + MinutesToMilliseconds(720);
-	if (m_AlarmMilliSeconds > LongestTime)
+	INT64 LongestAlarmTime = CurrentMS + MinutesToMilliseconds(720);
+	if (m_AlarmMilliSeconds > LongestAlarmTime)
 	{
-		m_AlarmMilliSeconds = LongestTime;
+		m_AlarmMilliSeconds = LongestAlarmTime;
 		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
 			grabbed = FALSE;
 	}

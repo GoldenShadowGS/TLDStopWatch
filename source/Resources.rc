@@ -75,6 +75,7 @@ IDBITMAP_MINUTEHAND         BITMAPDATA              "resources/MinuteHand.bmp"
 IDBITMAP_MINUTEHANDSHADOW   BITMAPDATA              "resources/MinuteHandShadow.bmp"
 IDBITMAP_HOURHAND           BITMAPDATA              "resources/HourHand.bmp"
 IDBITMAP_HOURHANDSHADOW     BITMAPDATA              "resources/HourHandShadow.bmp"
+IDBITMAP_UI                 BITMAPDATA              "resources/UI.bmp"
 
 
 /////////////////////////////////////////////////////////////////////////////
