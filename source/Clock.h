@@ -46,6 +46,7 @@ private:
 	BOOL dragging = FALSE;
 	POINT lastLocation = {};
 	float MouseRadialRatio = 0.0f;
+	float outerRatio = 0.0f;
 	BOOL MouseinWindow = FALSE;
 	BOOL CanStartTimer = TRUE;
 	BOOL MouseTimeout = FALSE;

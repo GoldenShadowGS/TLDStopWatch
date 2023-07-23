@@ -22,6 +22,7 @@
 #define IDBITMAP_MINUTEHANDSHADOW       301
 #define IDBITMAP_HOURHAND               302
 #define IDBITMAP_HOURHANDSHADOW         303
+#define IDBITMAP_UI                     304
 
 #define IDC_STATIC                      -1
 

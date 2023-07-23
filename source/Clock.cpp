@@ -14,7 +14,8 @@ BOOL ClockApp::Init(HINSTANCE hInstance, int nCmdShow)
 	DWORD style = WS_POPUP; // WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX    // WS_POPUP
 	DWORD exstyle = WS_EX_LAYERED; // WS_EX_LAYERED
 	m_ClientSize = 200;  // 250
-	RECT winrect = { 0, 0, m_ClientSize, m_ClientSize };
+	int WindowSize = m_ClientSize + 10;
+	RECT winrect = { 0, 0, WindowSize, WindowSize };
 	AdjustWindowRectEx(&winrect, style, false, exstyle);
 
 	m_WindowWidth = winrect.right - winrect.left;
@@ -31,20 +32,39 @@ BOOL ClockApp::Init(HINSTANCE hInstance, int nCmdShow)
 	SetWindowPos(hMainWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	m_ClientRectF.left = 0.0f;
-	m_ClientRectF.right = (float)m_ClientSize;
+	m_ClientRectF.right = (float)m_WindowWidth;
 	m_ClientRectF.top = 0.0f;
-	m_ClientRectF.bottom = (float)m_ClientSize;
+	m_ClientRectF.bottom = (float)m_WindowHeight;
 
 
 	m_Clockinfo.OuterRadius = m_ClientSize / 2.0f;
 	m_Clockinfo.InnerRadius = m_Clockinfo.OuterRadius * 0.85f;
 	m_Clockinfo.minuteAngle = 270;
 	m_Clockinfo.hourAngle = 270;
-	m_Clockinfo.centerX = float(m_ClientSize) / 2.0f;
-	m_Clockinfo.centerY = float(m_ClientSize) / 2.0f;
+	m_Clockinfo.centerX = float(m_WindowWidth) / 2.0f;
+	m_Clockinfo.centerY = float(m_WindowHeight) / 2.0f;
 	float scale = m_Clockinfo.OuterRadius / 200.0f;
+	m_Clockinfo.UI_Scale = scale * 0.8f;
 	m_Clockinfo.shadowoffsetx *= scale;
 	m_Clockinfo.shadowoffsety *= scale;
+
+	//Set UI button positions
+	float radius = m_Clockinfo.OuterRadius * 1.15f;
+	m_Clockinfo.buttonpos[CLOSE].x = cos(-QuarterPI) * radius + m_Clockinfo.centerX;
+	m_Clockinfo.buttonpos[CLOSE].y = sin(-QuarterPI) * radius + m_Clockinfo.centerY;
+
+	m_Clockinfo.buttonpos[RESET].x = cos(QuarterPI * -3.0f) * radius + m_Clockinfo.centerX;
+	m_Clockinfo.buttonpos[RESET].y = sin(QuarterPI * -3.0f) * radius + m_Clockinfo.centerY;
+
+	m_Clockinfo.buttonpos[ADD].x = cos(QuarterPI) * radius + m_Clockinfo.centerX;
+	m_Clockinfo.buttonpos[ADD].y = sin(QuarterPI) * radius + m_Clockinfo.centerY;
+
+	m_Clockinfo.buttonpos[MINUS].x = cos(QuarterPI * 3.0f) * radius + m_Clockinfo.centerX;
+	m_Clockinfo.buttonpos[MINUS].y = sin(QuarterPI * 3.0f) * radius + m_Clockinfo.centerY;
+	m_Clockinfo.ButtonHighlightRadius = 36.0f * m_Clockinfo.UI_Scale;
+	m_Clockinfo.ButtonBackGroundRadius = 36.0f * m_Clockinfo.UI_Scale * 1.25f;
+
+	outerRatio = m_Clockinfo.OuterRadius / m_Clockinfo.InnerRadius;
 
 	if (!m_Renderer.Init(hMainWindow, m_Clockinfo, m_ClientRectF))
 		return FALSE;
@@ -217,13 +237,18 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 		MouseinWindow = FALSE;
 		m_Clockinfo.BorderHighlight = FALSE;
 		m_Clockinfo.RedrawBackGround = TRUE;
+		m_Clockinfo.ButtonHighlight = NONE;
 	}
 	break;
 	case WM_MOUSELEAVE:
 	{
-		m_Clockinfo.BorderHighlight = FALSE;
-		MouseinWindow = FALSE;
-		m_Clockinfo.RedrawBackGround = TRUE;
+		if (!dragging)
+		{
+			m_Clockinfo.BorderHighlight = FALSE;
+			MouseinWindow = FALSE;
+			m_Clockinfo.RedrawBackGround = TRUE;
+			m_Clockinfo.ButtonHighlight = NONE;
+		}
 	}
 	break;
 	case WM_MOUSEMOVE:
@@ -239,22 +264,6 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 		m_Input.mousepos.Y = (float)GET_Y_LPARAM(lParam);
 		m_MouseAngle = fmod(getMouseAngle(m_Input.mousepos, m_Clockinfo.centerX, m_Clockinfo.centerY) + PI3_4, PI2);
 
-		if (MouseRadialRatio > 1.0f && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed)
-		{
-			if (!m_Clockinfo.BorderHighlight)
-			{
-				m_Clockinfo.BorderHighlight = TRUE;
-				m_Clockinfo.RedrawBackGround = TRUE;
-			}
-		}
-		else
-		{
-			if (m_Clockinfo.BorderHighlight)
-			{
-				m_Clockinfo.BorderHighlight = FALSE;
-				m_Clockinfo.RedrawBackGround = TRUE;
-			}
-		}
 		if (dragging)
 		{
 			POINT currentpos;
@@ -262,6 +271,35 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 			int x = currentpos.x - lastLocation.x;
 			int y = currentpos.y - lastLocation.y;
 			MoveWindow(hWnd, x, y, m_WindowWidth, m_WindowHeight, false);
+		}
+		else
+		{
+			if (MouseRadialRatio > 1.0f && MouseRadialRatio < outerRatio && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed)
+			{
+				if (!m_Clockinfo.BorderHighlight)
+				{
+					m_Clockinfo.BorderHighlight = TRUE;
+					m_Clockinfo.RedrawBackGround = TRUE;
+				}
+				m_Clockinfo.ButtonHighlight = NONE;
+			}
+			else
+			{
+				if (m_Clockinfo.BorderHighlight)
+				{
+					m_Clockinfo.BorderHighlight = FALSE;
+					m_Clockinfo.RedrawBackGround = TRUE;
+				}
+				m_Clockinfo.ButtonHighlight = NONE;
+				for (int i = 0; i < 4; i++)
+				{
+					float MouseDistButton = GetPointDist(m_Clockinfo.buttonpos[i].x, m_Clockinfo.buttonpos[i].y, m_Input.mousepos.X, m_Input.mousepos.Y);
+					if (MouseDistButton < m_Clockinfo.ButtonHighlightRadius)
+					{
+						m_Clockinfo.ButtonHighlight = i;
+					}
+				}
+			}
 		}
 	}
 	break;
@@ -276,7 +314,7 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 			m_Clockinfo.AlarmHandleGrabbed = FALSE;
 			CanStartTimer = FALSE;
 		}
-		else if (MouseRadialRatio > 1.0f) // Dragging Window if on Clock Border
+		else if (MouseRadialRatio > 1.0f && MouseRadialRatio < outerRatio) // Dragging Window if on Clock Border
 		{
 			dragging = TRUE;
 			GetCursorPos(&lastLocation);
@@ -286,6 +324,7 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 			lastLocation.y = lastLocation.y - rect.top;
 			CanStartTimer = FALSE;
 		}
+		m_Clockinfo.ButtonMouseDown = m_Clockinfo.ButtonHighlight;
 	}
 	break;
 	case WM_LBUTTONUP:
@@ -297,14 +336,30 @@ LRESULT CALLBACK ClockApp::ClockWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 		}
 		m_Clockinfo.MinuteHandleGrabbed = FALSE;
 		dragging = FALSE;
-		if (MouseRadialRatio < 1.0f && !m_Clockinfo.HandHover && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed && CanStartTimer)
+		if (MouseRadialRatio < 1.0f && !m_Clockinfo.HandHover && !m_Clockinfo.MinuteHandleGrabbed && !m_Clockinfo.AlarmHandleGrabbed && CanStartTimer && m_Clockinfo.ButtonMouseDown < 0)
 		{
 			ToggleTimer();
 		}
 		CanStartTimer = TRUE;
-		// Close the App
-		//if (m_Input.mousepos.X > m_ClientSize - 50 && m_Input.mousepos.Y < 50)
-		//	SendMessage(hWnd, WM_CLOSE, 0, 0);
+
+		if (m_Clockinfo.ButtonMouseDown == m_Clockinfo.ButtonHighlight)
+		{
+			switch (m_Clockinfo.ButtonHighlight)
+			{
+			case RESET:
+				//Reset();
+				break;
+			case CLOSE:
+				SendMessage(hWnd, WM_CLOSE, 0, 0); // Close the App
+				break;
+			case ADD:
+				//Add();
+				break;
+			case MINUS:
+				//Minus();
+				break;
+			}
+		}
 	}
 	break;
 	case WM_MBUTTONDOWN:

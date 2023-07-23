@@ -61,6 +61,8 @@ bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE 
 			m_Size = pBitmap->GetSize();
 		}
 	}
+	halfwidth = m_Size.width * 0.5f;
+	halfheight = m_Size.height * 0.5f;
 	return true;
 }
 
@@ -79,20 +81,22 @@ void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y)
 	}
 }
 
-void Bitmap::DrawSprite(ID2D1HwndRenderTarget* rt, UINT index, const Sprite& sprite, float angle, float x, float y)
+void Bitmap::DrawSprite(ID2D1HwndRenderTarget* rt, UI_Buttons button, const Sprite& sprite, float angle, UI_ButtonPosition buttonpos, float scale)
 {
 	if (pBitmap)
 	{
-		UINT Xindex = index % sprite.cols;
-		UINT Yindex = index / sprite.rows;
+		UINT Xindex = button % sprite.cols;
+		UINT Yindex = button / sprite.rows;
 		const float sourcex = sprite.spritewidth * Xindex;
 		const float sourcey = sprite.spriteheight * Yindex;
 		const float offsetx = m_Pivot.x * m_Size.width;
 		const float offsety = m_Pivot.y * m_Size.height;
-		D2D1_POINT_2F Pivot = { offsetx + x, offsety + y };
-		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle - 90, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
+		D2D1_POINT_2F Pivot = { offsetx + buttonpos.x, offsety + buttonpos.y };
+		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
 
-		D2D1_RECT_F	rect = D2D1::RectF(x, y, x + m_Size.width, y + m_Size.height);
+		float scaledhalfwidth = halfwidth * scale;
+		float scaledhalfheight = halfheight * scale;
+		D2D1_RECT_F	rect = D2D1::RectF(buttonpos.x - scaledhalfheight, buttonpos.y - scaledhalfheight, buttonpos.x + scaledhalfheight, buttonpos.y + scaledhalfheight);
 		D2D1_RECT_F	sourcerect = D2D1::RectF(sourcex, sourcey, sourcex + sprite.spritewidth, sourcey + sprite.spriteheight);
 
 		rt->DrawBitmap(pBitmap, rect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, &sourcerect);

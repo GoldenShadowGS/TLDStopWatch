@@ -32,6 +32,10 @@ struct ClockInfo
 	float shadowoffsety = 6.0f;
 	float InnerRadius = 0.0f;
 	float OuterRadius = 0.0f;
+	float UI_Scale = 0.0f;
+	UI_ButtonPosition buttonpos[4];
+	float ButtonHighlightRadius = 0.0f;
+	float ButtonBackGroundRadius = 0.0f;
 	BOOL HandHover = FALSE;
 	BOOL AlarmHover = FALSE;
 	BOOL BorderHighlight = FALSE;
@@ -39,6 +43,8 @@ struct ClockInfo
 	BOOL Timing = FALSE;
 	BOOL MinuteHandleGrabbed = FALSE;
 	BOOL AlarmHandleGrabbed = FALSE;
+	int ButtonHighlight = -1;
+	int ButtonMouseDown = -1;
 };
 
 class Renderer
@@ -64,7 +70,7 @@ private:
 	ID2D1GradientStopCollection* pStopsCollection = nullptr;
 	ID2D1GradientStopCollection* pStopsCollectionHover = nullptr;
 	ID2D1RadialGradientBrush* pRadialGradientBrush = nullptr;
-	ID2D1RadialGradientBrush* pRadialGradientBrushHover = nullptr;
+	//ID2D1RadialGradientBrush* pRadialGradientBrushHover = nullptr;
 
 	D2D1::ColorF ClearColor = { 0.0f,0.0f,0.0f };
 
@@ -80,6 +86,9 @@ private:
 	std::unique_ptr<Bitmap> minutehandbitmapShadow;
 	std::unique_ptr<Bitmap> hourhandbitmapShadow;
 	std::unique_ptr<Bitmap> UIbitmap;
+	std::unique_ptr<Bitmap> UIHoverbitmap;
 
 	D2D1_RECT_F m_ClientRect = {};
+
+	Sprite UIsprite = {};
 };

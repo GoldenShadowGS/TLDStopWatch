@@ -3,6 +3,7 @@
 
 constexpr float PI = 3.141592f;
 constexpr float HalfPI = PI / 2.0f;
+constexpr float QuarterPI = PI / 4.0f;
 constexpr float PI2 = PI * 2.0f;
 constexpr float PI3_4 = PI * 1.5f;
 constexpr float Deg2RadFactor = PI / 180.0f;
