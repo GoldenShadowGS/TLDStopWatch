@@ -1,6 +1,7 @@
 #pragma once
 #include "PCH.h"
 #include "Math.h"
+#include "Elements.h"
 
 inline float MinutesToAngle(float minutes)
 {
@@ -15,6 +16,22 @@ inline float MinutesToAngleRads(float minutes)
 inline float HoursToAngle(float hours)
 {
 	return (fmod(hours, 12.0f) / 12.0f) * 360;
+}
+
+inline float HoursToAngleRads(float hours)
+{
+	return (fmod(hours, 12.0f) / 12.0f) * PI2;
+}
+
+inline float RoundAngleToMinute(float anglerads)
+{
+	const float normalizedangle = anglerads / PI2;
+	return round(normalizedangle * 60.0f);
+}
+
+inline float MinuteToAngle(float minutes)
+{
+	return (minutes / 60.0f) * PI2;
 }
 
 class Timer
@@ -34,9 +51,11 @@ public:
 	float getGameMinutes();
 	float getGameSeconds();
 	float getGameHours();
+	float getGameDays();
+	void AddMinutes(float minutes);
 	float AngleToMinutes(float angle);
-	void AdjustTime(float MouseAnglerads, BOOL& grabbed);
-	void AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed);
+	void AdjustTime(float MouseAnglerads, GrabbedElement& grabbed);
+	void AdjustAlarmTime(float MouseAnglerads, GrabbedElement& grabbed);
 	void ResetAlarm() { m_AlarmMilliSeconds = 0; }
 	BOOL isTiming() { return Timing; }
 	BOOL isSuspended() { return Suspended; }

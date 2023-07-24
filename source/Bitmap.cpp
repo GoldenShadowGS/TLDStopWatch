@@ -8,20 +8,22 @@
 Bitmap::Bitmap()
 {}
 
-bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float scale)
+bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float angleoffsetDeg, float scale)
 {
+	m_angleoffsetDeg = angleoffsetDeg;
 	FileLoader(resource);
-	m_ExpandedPixels.resize(m_RawPixels.size() * 4);
-	for (UINT64 i = 0; i < m_RawPixels.size(); i++)
+	FlipImage();
+	m_ExpandedPixels.resize(m_FlippedRawPixels.size() * 4);
+	for (UINT64 i = 0; i < m_FlippedRawPixels.size(); i++)
 	{
 		const size_t expandedindex = i * 4;
-		const float alpha = (255 - m_RawPixels[i]) / 255.0f;
+		const float alpha = (255 - m_FlippedRawPixels[i]) / 255.0f;
 		m_ExpandedPixels[expandedindex + 0] = BYTE(b * alpha);
 		m_ExpandedPixels[expandedindex + 1] = BYTE(g * alpha);
 		m_ExpandedPixels[expandedindex + 2] = BYTE(r * alpha);
 		m_ExpandedPixels[expandedindex + 3] = BYTE(alpha * 255.0f);
 	}
-	m_RawPixels.clear();
+	m_FlippedRawPixels.clear();
 	m_Pivot = D2D1::Point2F(pivotx, pivoty);
 
 	D2D1_SIZE_U bitmapsize = {};
@@ -66,6 +68,18 @@ bool Bitmap::Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE 
 	return true;
 }
 
+void Bitmap::FlipImage()
+{
+	m_FlippedRawPixels.resize(m_RawPixels.size());
+	int pitch = m_Pitch / 4;
+	for (UINT64 row = 0; row < m_PixelHeight; row++)
+	{
+		BYTE* SrcRow = m_RawPixels.data() + (row * pitch);
+		BYTE* DestRow = m_FlippedRawPixels.data() + (((m_PixelHeight - 1LL) - row) * pitch);
+		memcpy(DestRow, SrcRow, pitch);
+	}
+}
+
 void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y)
 {
 	if (pBitmap)
@@ -73,7 +87,7 @@ void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y)
 		const float offsetx = m_Pivot.x * m_Size.width;
 		const float offsety = m_Pivot.y * m_Size.height;
 		D2D1_POINT_2F Pivot = { offsetx + x, offsety + y };
-		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle - 90, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
+		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle + m_angleoffsetDeg, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
 
 		D2D1_RECT_F	rect = D2D1::RectF(x, y, x + m_Size.width, y + m_Size.height);
 
@@ -81,7 +95,7 @@ void Bitmap::Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y)
 	}
 }
 
-void Bitmap::DrawSprite(ID2D1HwndRenderTarget* rt, UI_Buttons button, const Sprite& sprite, float angle, UI_ButtonPosition buttonpos, float scale)
+void Bitmap::DrawSprite(ID2D1HwndRenderTarget* rt, int button, const Sprite& sprite, float angle, UI_ButtonPosition buttonpos, float scale)
 {
 	if (pBitmap)
 	{
@@ -92,7 +106,7 @@ void Bitmap::DrawSprite(ID2D1HwndRenderTarget* rt, UI_Buttons button, const Spri
 		const float offsetx = m_Pivot.x * m_Size.width;
 		const float offsety = m_Pivot.y * m_Size.height;
 		D2D1_POINT_2F Pivot = { offsetx + buttonpos.x, offsety + buttonpos.y };
-		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
+		rt->SetTransform(D2D1::Matrix3x2F::Rotation(angle + m_angleoffsetDeg, Pivot) * D2D1::Matrix3x2F::Translation(-offsetx, -offsety));
 
 		float scaledhalfwidth = halfwidth * scale;
 		float scaledhalfheight = halfheight * scale;

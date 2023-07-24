@@ -3,9 +3,6 @@
 #include "Math.h"
 #include "Sound.h"
 
-//extern BOOL MinuteHandleGrabbed;
-//extern BOOL AlarmHandleGrabbed;
-
 constexpr float TimeFactor = 5000.0f;
 constexpr INT64 I64TimeFactor = (INT64)TimeFactor;
 constexpr float InvTimeFactor = 1.0f / TimeFactor;
@@ -55,6 +52,7 @@ void Timer::ResetTimer()
 	m_CurrentMilliSecondsDuration = 0;
 	m_AccumulatedMilliSecondsDuration = 0;
 	start = std::chrono::steady_clock::now();
+	ResetAlarm();
 }
 
 void Timer::update()
@@ -103,6 +101,24 @@ float Timer::getGameHours()
 	return (m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration) * hourfactor;
 }
 
+float Timer::getGameDays()
+{
+	constexpr float daysfactor = 1.0f / 1440.0f * InvTimeFactor;
+	return (m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration) * daysfactor;
+}
+
+void Timer::AddMinutes(float minutes)
+{
+	INT64 CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
+	BOOL AlarmSet = (m_AlarmMilliSeconds > CurrentMS);
+	m_AccumulatedMilliSecondsDuration += MinutesToMilliseconds(minutes);
+	INT64 NewMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
+	if (NewMS < 0)
+		m_AccumulatedMilliSecondsDuration = -m_CurrentMilliSecondsDuration;
+	if (!AlarmSet || m_AlarmMilliSeconds < CurrentMS)
+		m_AlarmMilliSeconds = NewMS;
+}
+
 float Timer::AngleToMinutes(float angle)
 {
 	constexpr double conversion = (1.0f / PI2) * 60.0;
@@ -122,12 +138,12 @@ float GetMinuteDistance(float min1, float min2)
 	return dist;
 }
 
-void Timer::AdjustTime(float MouseAnglerads, BOOL& grabbed)
+void Timer::AdjustTime(float MouseAnglerads, GrabbedElement& grabbed)
 {
 	INT64 CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
 	BOOL AlarmOFF = (m_AlarmMilliSeconds <= CurrentMS);
 	float currentminutes = fmod(getGameMinutes(), 60.0f);
-	float newminutes = fmod(AngleToMinutes(MouseAnglerads + HalfPI), 60.0f);
+	float newminutes = fmod(AngleToMinutes(MouseAnglerads), 60.0f);
 	float minutesRange = newminutes - currentminutes;
 	if (minutesRange > 30.0f)
 		minutesRange -= 60.0f;
@@ -141,7 +157,7 @@ void Timer::AdjustTime(float MouseAnglerads, BOOL& grabbed)
 		m_AccumulatedMilliSecondsDuration = -m_CurrentMilliSecondsDuration;
 		CurrentMS = m_AccumulatedMilliSecondsDuration + m_CurrentMilliSecondsDuration;
 		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
-			grabbed = FALSE;
+			grabbed = GRABBED_NONE;
 	}
 	{
 		INT64 LongestAlarmTime = CurrentMS + MinutesToMilliseconds(720);
@@ -155,7 +171,7 @@ void Timer::AdjustTime(float MouseAnglerads, BOOL& grabbed)
 		m_AlarmMilliSeconds = CurrentMS;
 }
 
-void Timer::AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed)
+void Timer::AdjustAlarmTime(float MouseAnglerads, GrabbedElement& grabbed)
 {
 	float alarmminutes = getAlarmMinutes();
 	float timerminute = getGameMinutes();
@@ -163,10 +179,10 @@ void Timer::AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed)
 	if (alarmminutes <= timerminute)
 		zeroed = TRUE;
 	float currentminutes = fmod(getAlarmMinutes(), 60.0f);
-	float newminutes = fmod(AngleToMinutes(MouseAnglerads + HalfPI), 60.0f);
+	float newminutes = fmod(AngleToMinutes(MouseAnglerads), 60.0f);
 	float minutesRange = newminutes - currentminutes;
 	if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f && zeroed)
-		grabbed = FALSE;
+		grabbed = GRABBED_NONE;
 	if (minutesRange > 30.0f)
 		minutesRange -= 60.0f;
 	if (minutesRange < -30.0f)
@@ -180,7 +196,7 @@ void Timer::AdjustAlarmTime(float MouseAnglerads, BOOL& grabbed)
 	{
 		m_AlarmMilliSeconds = LongestAlarmTime;
 		if (abs(GetMinuteDistance(currentminutes, newminutes)) > 5.0f)
-			grabbed = FALSE;
+			grabbed = GRABBED_NONE;
 	}
 	m_AlarmMilliSeconds = RoundToMinute(m_AlarmMilliSeconds);
 }

@@ -30,6 +30,7 @@
     <ClCompile Include="source\RenderableText.cpp" />
     <ClCompile Include="source\Renderer.cpp" />
     <ClCompile Include="source\ResourceLoader.cpp" />
+    <ClCompile Include="source\Shape.cpp" />
     <ClCompile Include="source\Sound.cpp" />
     <ClCompile Include="source\Time.cpp" />
   </ItemGroup>
@@ -37,6 +38,7 @@
     <ClInclude Include="source\ArcRenderer.h" />
     <ClInclude Include="source\Bitmap.h" />
     <ClInclude Include="source\Clock.h" />
+    <ClInclude Include="source\Elements.h" />
     <ClInclude Include="source\Input.h" />
     <ClInclude Include="source\Math.h" />
     <ClInclude Include="source\PCH.h" />
@@ -44,6 +46,7 @@
     <ClInclude Include="source\Renderer.h" />
     <ClInclude Include="source\Resource.h" />
     <ClInclude Include="source\ResourceLoader.h" />
+    <ClInclude Include="source\Shape.h" />
     <ClInclude Include="source\Sound.h" />
     <ClInclude Include="source\targetver.h" />
     <ClInclude Include="source\Time.h" />
@@ -145,6 +148,14 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d2d1.lib;Dwrite.lib;Dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -164,6 +175,14 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d2d1.lib;Dwrite.lib;Dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

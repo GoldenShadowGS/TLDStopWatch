@@ -1,20 +1,6 @@
 #pragma once
 #include "PCH.h"
-
-enum UI_Buttons
-{
-	NONE = -1,
-	RESET = 0,
-	CLOSE = 1,
-	ADD = 2,
-	MINUS = 3
-};
-
-struct UI_ButtonPosition
-{
-	float x = 0.0f;
-	float y = 0.0f;
-};
+#include "Elements.h"
 
 struct Sprite
 {
@@ -36,13 +22,16 @@ private:
 	D2D1_SIZE_F m_Size = {};
 	float halfwidth = 0.0f;
 	float halfheight = 0.0f;
+	float m_angleoffsetDeg = 0.0f;
 	std::vector<BYTE> m_RawPixels;
+	std::vector<BYTE> m_FlippedRawPixels;
 	std::vector<BYTE> m_ExpandedPixels;
 public:
 	Bitmap();
-	bool Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float scale);
+	bool Load(ID2D1HwndRenderTarget* rt, int resource, BYTE r, BYTE g, BYTE b, float pivotx, float pivoty, float angleoffsetDeg, float scale);
+	void FlipImage();
 	void Draw(ID2D1HwndRenderTarget* rt, float angle, float x, float y);
-	void DrawSprite(ID2D1HwndRenderTarget* rt, UI_Buttons button, const Sprite& sprite, float angle, UI_ButtonPosition buttonpos, float scale);
+	void DrawSprite(ID2D1HwndRenderTarget* rt, int button, const Sprite& sprite, float angle, UI_ButtonPosition buttonpos, float scale);
 private:
 	bool FileLoader(int resource);
 };

@@ -5,12 +5,13 @@
 #include "Input.h"
 #include "Math.h"
 #include "Sound.h"
+#include "Elements.h"
 
 class ClockApp
 {
 public:
 	ClockApp();
-	BOOL Init(HINSTANCE hInstance, int nCmdShow);
+	BOOL Init(HINSTANCE hInstance, int nCmdShow, int clientradius);
 	ATOM RegisterClockWindowClass(HINSTANCE hInstance);
 	void update();
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -19,10 +20,17 @@ private:
 	void setClockInfo();
 	void ToggleTimer();
 	void SoundUpdate();
+	void MouseMoved(HWND hWnd, LPARAM lParam);
+	void AdjustTimer();
+	void MouseHoverElement(HighLightedElement element);
+	void MouseGrab(GrabbedElement element);
+	void GenerateText();
 	SoundManager m_soundManager;
 	Renderer m_Renderer;
 	Timer m_Timer;
 	ClockInfo m_Clockinfo = {};
+	const WCHAR* m_Title = L"TLD StopWatch";
+	const WCHAR* m_WindowClass = L"TLDTimerWindowsClass";
 	HWND hMainWindow = nullptr;
 	HINSTANCE hInst = {};
 	Input m_Input = {};
@@ -37,18 +45,11 @@ private:
 	WavFile StartClick;
 	WavFile Click1;
 	WavFile Click2;
-	const WCHAR* m_Title = L"TLD StopWatch";
-	const WCHAR* m_WindowClass = L"TLDTimerWindowsClass";
-	//BOOL MinuteHandleGrabbed = FALSE;
-	//BOOL AlarmHandleGrabbed = FALSE;
-
-	// Window Dragging Variables
-	BOOL dragging = FALSE;
 	POINT lastLocation = {};
-	float MouseRadialRatio = 0.0f;
 	float outerRatio = 0.0f;
+	HighLightedElement HoveredElement = HIGHLIGHTED_NONE;
 	BOOL MouseinWindow = FALSE;
-	BOOL CanStartTimer = TRUE;
-	BOOL MouseTimeout = FALSE;
+	BOOL MouseTimedOut = FALSE;
+	BOOL AlarmSoundSet = FALSE;
 	std::chrono::time_point<std::chrono::steady_clock> LastMouseMovedTime;
 };
